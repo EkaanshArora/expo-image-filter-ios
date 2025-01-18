@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-image-filter": ["../src/index"],
+      "expo-image-filter/*": ["../src/*"]
+    }
+  }
+}

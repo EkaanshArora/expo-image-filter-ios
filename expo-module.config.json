@@ -1,0 +1,17 @@
+{
+  "platforms": [
+    "apple",
+    "android",
+    "web"
+  ],
+  "apple": {
+    "modules": [
+      "ExpoImageFilterModule"
+    ]
+  },
+  "android": {
+    "modules": [
+      "expo.modules.imagefilter.ExpoImageFilterModule"
+    ]
+  }
+}
