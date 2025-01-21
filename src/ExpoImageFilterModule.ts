@@ -14,10 +14,10 @@ declare class ExpoImageFilterModule extends NativeModule<ExpoImageFilterModuleEv
   ): Promise<string>;
   // applyFilter(image: SharedRef<'image'>, filter: string): Promise<[SharedRef<'image'>, string]>;
   createCIFilter(filter: string): Promise<SharedRef<'CIFilter'>>;
-  setValue(FilterRef: SharedRef<'CIFilter'>, value: string | SharedRef<'image'>, forKey: string): Promise<void>;
-  logSharedRef(FilterRef: SharedRef<'CIFilter'>): Promise<void>;
-  outputImage(FilterRef: SharedRef<'CIFilter'>): Promise<SharedRef<'image'>>;
-  base64ImageData(Image: SharedRef<'image'>): Promise<string>;
+  logSharedRef(FilterRef: SharedRef<'CIFilter'>): Promise<boolean>;
+  setValue(FilterRef: SharedRef<'CIFilter'>, value: string | SharedRef<'image'>, forKey: string): Promise<boolean>;
+  outputImage(FilterRef: SharedRef<'CIFilter'>): Promise<SharedRef<'UIImageOutput'>>;
+  base64ImageData(Image: SharedRef<'UIImageOutput'>): Promise<string>;
 }
 
 // This call loads the native module object from the JSI.

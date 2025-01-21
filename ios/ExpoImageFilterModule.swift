@@ -3,14 +3,19 @@ import CoreImage.CIFilterBuiltins
 import ExpoModulesCore
 import UIKit
 
-@objcMembers
 public final class FilterRef: SharedRef<CIFilter> {
     public override var nativeRefType: String {
     "CIFilter"
   }
 
   func printName() -> String {
-    return ref.name
+      return self.ref.name
+  }
+}
+
+public final class OutputImageRef: SharedRef<UIImage> {
+    public override var nativeRefType: String {
+    "UIImageOutput"
   }
 }
 
@@ -24,112 +29,96 @@ public class ExpoImageFilterModule: Module {
         // The module will be accessible from `requireNativeModule('ExpoImageFilter')` in JavaScript.
         Name("ExpoImageFilter")
 
-        // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-        Constants([
-            "PI": Double.pi,
-        ])
-
-        // Defines event names that the module can send to JavaScript.
-        Events("onChange")
-
-        // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-        Function("hello") {
-            "Hello world! 👋"
-        }
-
-        // Defines a JavaScript function that always returns a Promise and whose native code
-        // is by default dispatched on the different thread than the JavaScript runtime runs on.
-        AsyncFunction("setValueAsync") { (value: String) in
-            // Send an event to JavaScript.
-            self.sendEvent("onChange", [
-                "value": value,
-            ])
-        }
-
-        AsyncFunction("createCIFilter") { (filterName: String, promise: Promise) in
+        Function("createCIFilter") { (filterName: String) in
             print("filterName", filterName)
             
-            guard let filter = CIFilter(name: filterName) else {
-                // If the filter fails to be created, resolve with `nil`.
-                print("Unable to create filter with name:", filterName)
-                return promise.resolve(nil)
-            }
-            
-            // Wrap the native filter in your specialized `FilterRef`
-            let filterRef = FilterRef(filter)
+            let filter = CIFilter(name: filterName)
+            let filterRef = FilterRef(filter!)
             print("Created filterRef:", filterRef)
             
-            return promise.resolve(filterRef)
+            let coreImageKeys: [String: String] = {
+                var keys = [String: String]()
+                let filter = CIFilter(name: filter!.name)
+                let attributes = filter?.attributes ?? [:]
+                
+                for (key, value) in attributes {
+                    if let attributeDict = value as? [String: Any],
+                       let attributeClass = attributeDict[kCIAttributeClass] as? String {
+                        keys[attributeClass] = key
+                    }
+                }
+                return keys
+            }()
+            print("coreImageKeys", coreImageKeys)
+            
+            return filterRef
         }
 
         AsyncFunction("logSharedRef") { (filterRef: FilterRef?, promise: Promise) in
             if let filter = filterRef {
                 print("logSharedRef - filter:", filter)
                 print("logSharedRef - filter name:", filter.ref.name)
+                return promise.resolve(true)
             } else {
                 print("logSharedRef - received nil filter reference")
+                return promise.resolve(true)
             }
         }
 
+        
         AsyncFunction("setValue") { (FilterRef: FilterRef, value: Either<String, SharedRef<UIImage>>, forKey: String, promise: Promise) in
             print("setValue")
-            print("FilterRef", FilterRef)
             if let url: String = value.get() {
-                FilterRef.ref.setValue(url, forKey: forKey)
-            }
-            if let image: SharedRef<UIImage> = value.get() {
-                if let ciImage = CIImage(image: image.ref) {
-                    FilterRef.ref.setValue(ciImage, forKey: forKey)
+                print("url", url)
+                if let floatValue = Float(url) {
+                  print("floatValue", floatValue)
+                    FilterRef.ref.setValue(floatValue, forKey: forKey)
+                } else {
+                    return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to convert string to float"]))
                 }
+                return promise.resolve(true)
             }
+
+            print("FilterRef",FilterRef)
+            print("value", value)
+            print("forKey", forKey)
+            
+            if let image: SharedRef<UIImage> = value.get() {
+                print("image", image)
+                if let ciImage = CIImage(image: image.ref) {
+                    print("ciImage value", ciImage)
+                    print("kCIInputImageKey", kCIInputImageKey)
+                    print("forKey", forKey)
+                    FilterRef.ref.setValue(ciImage, forKey: forKey)
+                    return promise.resolve(true)
+                }
+                return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to get output image1"]))
+            }
+            return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to get output image2"]))
         }
 
-        AsyncFunction("outputImage") { (FilterRef: FilterRef, promise: Promise) in
+        Function("outputImage") { (FilterRef: FilterRef) in
+            print("outputImage")
             print(FilterRef)
             guard let ciImage = FilterRef.ref.outputImage else {
-                let emptyImage = UIImage()
-                return promise.resolve(SharedRef(emptyImage))
+                print("outputImage is nil")
+                return OutputImageRef(UIImage())
             }
             let uiImage = UIImage(ciImage: ciImage)
-            return promise.resolve(SharedRef(uiImage))
+            print("uiImage", uiImage)
+            return OutputImageRef(uiImage)
         }
 
-        AsyncFunction("base64ImageData") { (Image: SharedRef<UIImage>, promise: Promise) in
-            if let imageData = Image.ref.pngData() {
+        AsyncFunction("base64ImageData") { (OutputImage: OutputImageRef, promise: Promise) in
+            print("OutputImage", OutputImage)
+            if let imageData = OutputImage.ref.pngData() {
+                print("imageData", imageData)
                 let strBase64 = imageData.base64EncodedString(options: .lineLength64Characters)
                 print(strBase64)
                 return promise.resolve(strBase64)
             }
-            return promise.resolve("")
+            return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to get output image4"]))
         }
-
-//        AsyncFunction("applyFilter") { (image: SharedRef<UIImage>, filter: String, promise: Promise) in
-//            guard let ciImage = CIImage(image: image.ref) else {
-//                promise.reject(NSError(domain: "ExpoImageFilter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Image is nil"]))
-//                return
-//            }
-//            print(ciImage)
-//            guard let nativeFilter = CIFilter(name: filter) else {
-//                promise.reject(NSError(domain: "ExpoImageFilter", code: 2, userInfo: [NSLocalizedDescriptionKey: "Filter not found"]))
-//                return
-//            }
-//            print(nativeFilter)
-//            nativeFilter.setValue(ciImage, forKey: kCIInputImageKey)
-//            if let outputImage = nativeFilter.outputImage {
-//                print("outputImage")
-//                print(outputImage)
-//                let uiImage = UIImage(ciImage: outputImage)
-//                if let imageData = uiImage.pngData() {
-//                    let strBase64 = imageData.base64EncodedString(options: .lineLength64Characters)
-//                    print(strBase64)
-//                    promise.resolve([outputImage, strBase64])
-//                } else {
-//                    promise.reject(NSError(domain: "ExpoImageFilter", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to PNG data"]))
-//                }
-//            } else {
-//                promise.reject(NSError(domain: "ExpoImageFilter", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to apply filter"]))
-//            }
-//        }
   
         AsyncFunction("ApplyCIFilterToImageAndReturnBase64") { (image: SharedRef<UIImage>, filterName: String, filterValues: [String: Any], promise: Promise) in
             guard let ciImage = CIImage(image: image.ref) else {
@@ -174,17 +163,5 @@ public class ExpoImageFilterModule: Module {
             }
         }
 
-        // Enables the module to be used as a native view. Definition components that are accepted as part of the
-        // view definition: Prop, Events.
-        // View(ExpoImageFilterView.self) {
-        //   // Defines a setter for the `url` prop.
-        //   Prop("url") { (view: ExpoImageFilterView, url: URL) in
-        //     if view.webView.url != url {
-        //       view.webView.load(URLRequest(url: url))
-        //     }
-        //   }
-
-        //   Events("onLoad")
-        // }
     }
 }
