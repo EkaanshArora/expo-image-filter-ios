@@ -1,49 +1,113 @@
-import { useEvent } from 'expo';
 import ExpoImageFilter from 'expo-image-filter';
-import { launchImageLibraryAsync } from 'expo-image-picker';
 import { useImage } from 'expo-image';
-import { useEffect, useState } from 'react';
-import { Button, SafeAreaView, ScrollView, Text, View, Image } from 'react-native';
+import { useState } from 'react';
+import { Button, SafeAreaView, ScrollView, Text, Image } from 'react-native';
 
-const { createCIFilter, logSharedRef, setValue, outputImage, base64ImageData } = ExpoImageFilter;
+const { createCIFilter, setValueImage, setValue, outputImage, base64ImageData } = ExpoImageFilter;
+const imageURL = "https://ik.imagekit.io/ikmedia/Graphics/AI%20Landing%20page/Text%20prompt%20in%20URL.jpg?updatedAt=1726226940145&tr=w-400";
 
 export default function App() {
-  const [imaged, setImage] = useState<string | null>(null);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.container}>
+        <Text style={styles.header}>Module Example</Text>
+        <Image source={{ uri: imageURL }} style={{ width: 200, height: 200 }} />
+        <ExpoModuleComponent />
+        <RNImageFilter />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const RNImageFilter = () => {
   const [imaged2, setImage2] = useState<string | null>(null);
-  // useEffect(() => {
   const image = useImage({
-    uri: 'https://ik.imagekit.io/ikmedia/Graphics/AI%20Landing%20page/Text%20prompt%20in%20URL.jpg',
+    uri: imageURL,
     cacheKey: "example-image",
   });
 
-  const func = async () => {
+  const applyFilter = async () => {
     if (image) {
       try {
-        console.log("image", image)
-        const nativeFilter = await createCIFilter("CIColorMonochrome")
-        console.log("nativeFilter", nativeFilter)
-        await logSharedRef(nativeFilter)
-        console.log("set value", await setValue(nativeFilter, image, "inputImage"))
-        console.log("native filter before outputImage", nativeFilter)
-        const outputImageRes = await outputImage(nativeFilter)
-        console.log("outputImageRef", outputImageRes)
-        if(!outputImageRes) {
-          console.log("outputImage is nil")
-          return
-        }
-        const base64Image = await base64ImageData(outputImageRes)
-        console.log(base64Image)
-        setImage(base64Image)
-        // const base64Image = await ApplyCIFilterToImageAndReturnBase64(image, "CIColorMonochrome", [{ key: "inputImage", value: image }])
+        const response = await fetch(imageURL);
+        const blob = await response.blob();
+        const reader = new FileReader();
+
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          // Get the base64 data without the data URL prefix
+          const base64Data = base64.split(',')[1];
+
+          // Decode base64 to binary
+          const binaryData = atob(base64Data);
+          const length = binaryData.length;
+          const uint8Array = new Uint8Array(length);
+
+          // Convert binary to Uint8Array
+          for (let i = 0; i < length; i++) {
+            uint8Array[i] = binaryData.charCodeAt(i);
+          }
+
+          // Simple monochrome filter
+          for (let i = 0; i < uint8Array.length; i += 4) {
+            const avg = (uint8Array[i] + uint8Array[i + 1] + uint8Array[i + 2]) / 3;
+            uint8Array[i] = avg;     // Red
+            uint8Array[i + 1] = avg; // Green
+            uint8Array[i + 2] = avg; // Blue
+            // Keep alpha channel unchanged
+          }
+
+          // Convert back to base64 directly
+          let binary = '';
+          for (let i = 0; i < uint8Array.length; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+          }
+          const finalBase64 = btoa(binary);
+          console.log("finalBase64", finalBase64)
+          setImage2(finalBase64);
+        };
+
+        reader.readAsDataURL(blob);
       } catch (error) {
         console.error("Error applying filter:", error);
       }
+    }
+  };
+
+  return <>
+    <Button
+      title="Apply Filter"
+      onPress={async () => {
+        await applyFilter();
+      }}
+    />
+    {imaged2 ? <Image source={{ uri: `data:image/jpeg;base64,${imaged2}` }} style={{ width: 200, height: 200 }} /> : <></>}
+  </>
+}
+
+
+const ExpoModuleComponent = () => {
+  const [imaged2, setImage2] = useState<string | null>(null);
+  const image = useImage({
+    uri: imageURL,
+    cacheKey: "example-image",
+  });
+
+  const applyFilter = async () => {
+    if (image) {
       try {
-        const nativeFilter = await createCIFilter("CISepiaTone")
-        await setValue(nativeFilter, "0.8", "inputIntensity")
-        await setValue(nativeFilter, image, "inputImage")
+        const nativeFilter = await createCIFilter("CIColorMonochrome")
+        await setValue(nativeFilter, { stringValue: "1", type: "float" }, "inputIntensity")
+        // can we wrap this as: 
+        // await setValue(nativeFilter, "#ff00ffff", "inputColor") and 
+        // await setValue(nativeFilter, true, "inputImage")
+        // we can inherit the type from the value
+        await setValue(nativeFilter, { stringValue: "#ff00ffff", type: "CIColor" }, "inputColor")
+        await setValueImage(nativeFilter, image, "inputImage")
         const outputImageRes = await outputImage(nativeFilter)
         const base64Image = await base64ImageData(outputImageRes)
+        console.log("base64Image", base64Image)
         setImage2(base64Image)
       } catch (error) {
         console.error("Error applying filter:", error);
@@ -52,23 +116,15 @@ export default function App() {
 
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.header}>Module Example</Text>
-        <Image source={{ uri: 'https://ik.imagekit.io/ikmedia/Graphics/AI%20Landing%20page/Text%20prompt%20in%20URL.jpg' }} style={{ width: 200, height: 200 }} />
-        {imaged ? <Image source={{ uri: `data:image/png;base64,${imaged}` }} style={{ width: 200, height: 200 }} /> : <></>}
-        {imaged2 ? <Image source={{ uri: `data:image/png;base64,${imaged2}` }} style={{ width: 200, height: 200 }} /> : <></>}
-        {imaged ? <Text>{imaged.length}</Text> : <></>}
-        <Button
-            title="Set value"
-            onPress={async () => {
-              await func();
-            }}
-          />
-      </ScrollView>
-    </SafeAreaView>
-  );
+  return <>
+    <Button
+      title="Native Swift"
+      onPress={async () => {
+        await applyFilter();
+      }}
+    />
+    {imaged2 ? <Image source={{ uri: `data:image/png;base64,${imaged2}` }} style={{ width: 200, height: 200 }} /> : <></>}
+  </>
 }
 
 const styles = {

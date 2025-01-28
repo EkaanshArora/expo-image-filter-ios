@@ -3,6 +3,13 @@ import { NativeModule, requireNativeModule } from 'expo';
 
 import { ExpoImageFilterModuleEvents } from './ExpoImageFilter.types';
 import { SharedRef } from 'expo-modules-core/types';
+
+type DictVals = {
+  type: string;
+  stringValue: string;
+};
+
+
 declare class ExpoImageFilterModule extends NativeModule<ExpoImageFilterModuleEvents> {
   // PI: number;
   // hello(): string;
@@ -15,7 +22,8 @@ declare class ExpoImageFilterModule extends NativeModule<ExpoImageFilterModuleEv
   // applyFilter(image: SharedRef<'image'>, filter: string): Promise<[SharedRef<'image'>, string]>;
   createCIFilter(filter: string): Promise<SharedRef<'CIFilter'>>;
   logSharedRef(FilterRef: SharedRef<'CIFilter'>): Promise<boolean>;
-  setValue(FilterRef: SharedRef<'CIFilter'>, value: string | SharedRef<'image'>, forKey: string): Promise<boolean>;
+  setValue(FilterRef: SharedRef<'CIFilter'>, value: DictVals, forKey: string): Promise<boolean>;
+  setValueImage(FilterRef: SharedRef<'CIFilter'>, value: SharedRef<'image'>, forKey: string): Promise<boolean>;
   outputImage(FilterRef: SharedRef<'CIFilter'>): Promise<SharedRef<'UIImageOutput'>>;
   base64ImageData(Image: SharedRef<'UIImageOutput'>): Promise<string>;
 }
