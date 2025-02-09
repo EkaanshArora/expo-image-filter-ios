@@ -1,25 +1,15 @@
 import { useReleasingSharedObject } from 'expo-modules-core';
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ExpoImageFilterModuleEvents } from './ExpoImageFilter.types';
+import { DictVals, ExpoImageFilterModuleEvents } from './ExpoImageFilter.types';
 import { SharedRef } from 'expo-modules-core/types';
 
-type DictVals = {
-  type: "ciColor" | "string" | "number" | "boolean";
-  stringValue: string;
-};
-
-
 declare class ExpoImageFilterModule extends NativeModule<ExpoImageFilterModuleEvents> {
-  // PI: number;
-  // hello(): string;
-  // setValueAsync(value: string): Promise<void>;
   ApplyCIFilterToImageAndReturnBase64(
     image: SharedRef<'image'>,
     filterName: string,
-    filterValues: [{ key: string, value: string | SharedRef<'image'> }]
+    filterValues: Array<{ key: string, value: string | SharedRef<'image'> }>
   ): Promise<string>;
-  // applyFilter(image: SharedRef<'image'>, filter: string): Promise<[SharedRef<'image'>, string]>;
   createCIFilter(filter: string): Promise<SharedRef<'CIFilter'>>;
   logSharedRef(FilterRef: SharedRef<'CIFilter'>): Promise<boolean>;
   setValue(FilterRef: SharedRef<'CIFilter'>, value: DictVals, forKey: string): Promise<boolean>;
