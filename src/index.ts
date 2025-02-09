@@ -3,7 +3,7 @@
 // export { default } from './ExpoImageFilterModule';
 import { SharedRef } from 'expo-modules-core/types';
 import ExpoImageFilterModule from './ExpoImageFilterModule'
-import { HexColor } from './ExpoImageFilter.types';
+import { HexColor, FilterPropertyValue } from './ExpoImageFilter.types';
 
 const ApplyCIFilterToImageAndReturnBase64 = ExpoImageFilterModule.ApplyCIFilterToImageAndReturnBase64;
 /**
@@ -67,14 +67,22 @@ const setValueImage = ExpoImageFilterModule.setValueImage
  * const outputImageRes = await outputImage(nativeFilter)
  * const base64Image = await base64ImageData(outputImageRes)
  */
-const inferTypeAndSetValue = async (nativeFilter: SharedRef<'CIFilter'>, key: string, value: string | number | boolean | HexColor | SharedRef<'image'>) => {
-    if (typeof value === 'object' && 'height' in value && 'width' in value) {
+const inferTypeAndSetValue = async <T extends string>(
+    nativeFilter: SharedRef<'CIFilter'>,
+    key: T,
+    value:
+        T extends "inputColor" ? HexColor :
+        T extends "inputImage" ? SharedRef<'image'> :
+        FilterPropertyValue) => {
+    if (typeof value === 'object' && 'x' in value && 'y' in value) {
+        return await setValue(nativeFilter, { type: 'cgPoint', stringValue: `${value.x},${value.y}` }, key);
+    } else if (typeof value === 'object' && 'height' in value && 'width' in value) {
         return await setValueImage(nativeFilter, value, key);
     } else if (typeof value === 'string') {
         if (value.startsWith('#')) {
-            if (value.length === 8) {
+            if (value.length === 9) {
                 return await setValue(nativeFilter, { type: 'ciColor', stringValue: value }, key);
-            } else if (value.length === 6) {
+            } else if (value.length === 7) {
                 return await setValue(nativeFilter, { type: 'ciColor', stringValue: `${value}ff` }, key);
             } else {
                 throw new Error('Invalid hex color');

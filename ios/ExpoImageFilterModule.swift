@@ -8,6 +8,7 @@ enum DictValsStringValue: String, Enumerable {
     case number
     case boolean
     case ciColor
+    case cgPoint
 }
 
 struct DictVals: Record {
@@ -25,6 +26,24 @@ public final class FilterRef: SharedRef<CIFilter> {
 
     func printName() -> String {
         return ref.name
+    }
+    var coreImageKeys = [String: String]()
+
+    func getCoreImageKeys() -> [String: String] {
+        if coreImageKeys.isEmpty {
+            var keys = [String: String]()
+            let attributes = ref.attributes
+            
+        for (key, value) in attributes {
+            if let attributeDict = value as? [String: Any],
+               let attributeClass = attributeDict[kCIAttributeClass] as? String
+            {
+                    keys[key] = attributeClass
+                }
+            }
+            coreImageKeys = keys
+        }
+        return coreImageKeys
     }
 }
 
@@ -52,27 +71,10 @@ public class ExpoImageFilterModule: Module {
 
         Function("createCIFilter") { (filterName: String) in
             print("filterName", filterName)
-
             let filter = CIFilter(name: filterName)
             let filterRef = FilterRef(filter!)
             print("Created filterRef:", filterRef)
-
-            let coreImageKeys: [String: String] = {
-                var keys = [String: String]()
-                let filter = CIFilter(name: filter!.name)
-                let attributes = filter?.attributes ?? [:]
-
-                for (key, value) in attributes {
-                    if let attributeDict = value as? [String: Any],
-                       let attributeClass = attributeDict[kCIAttributeClass] as? String
-                    {
-                        keys[attributeClass] = key
-                    }
-                }
-                return keys
-            }()
-            print("coreImageKeys", coreImageKeys)
-
+            print("coreImageKeys", filterRef.getCoreImageKeys())
             return filterRef
         }
 
@@ -86,16 +88,34 @@ public class ExpoImageFilterModule: Module {
                 return promise.resolve(true)
             }
         }
-        
+
         AsyncFunction("setValue") { (FilterRef: FilterRef, value: DictVals, forKey: String, promise: Promise) in
             print("setValue")
             print("DictVals", value.type)
-
+            if !checkKeyForFilter(filter: FilterRef, key: forKey) {
+                print("Failed to check key", forKey, FilterRef.ref.name)
+                promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to check key \(forKey) for filter \(FilterRef.ref.name). Available keys: \(FilterRef.getCoreImageKeys().values)"]))
+                return
+            }
             switch value.type {
-            case DictValsStringValue.number:
-                if let floatValue = Float(value.stringValue) {
-                    FilterRef.ref.setValue(floatValue, forKey: forKey)
+            case .number:
+                print("number", value.stringValue)
+                guard let floatValue = Float(value.stringValue) else {
+                    promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to convert number"]))
+                    return
                 }
+                FilterRef.ref.setValue(floatValue, forKey: forKey)
+            case .cgPoint:
+                print("CGPoint", value.stringValue)
+                let components = value.stringValue.split(separator: ",")
+                guard let x = Double(components[0]), let y = Double(components[1]) else {
+                    promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to convert CGPoint"]))
+                    return
+                }
+                // CGPoint doesn't work here 
+                let cgPoint = CIVector(x: x, y: y)
+                print("cgPoint", cgPoint)
+                FilterRef.ref.setValue(cgPoint, forKey: forKey)
             case .ciColor:
                 print("CIColor", value.stringValue)
                 guard let color = UIColor(hex: value.stringValue) else {
@@ -107,12 +127,15 @@ public class ExpoImageFilterModule: Module {
                 print("colorValue", colorValue)
                 FilterRef.ref.setValue(colorValue, forKey: forKey)
             case .boolean:
-                if let booleanValue = Bool(value.stringValue) {
-                    FilterRef.ref.setValue(booleanValue, forKey: forKey)
+                print("boolean", value.stringValue)
+                guard let booleanValue = Bool(value.stringValue) else {
+                    promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to convert boolean"]))
+                    return
                 }
+                FilterRef.ref.setValue(booleanValue, forKey: forKey)
             case .string:
+                print("stringValue", value.stringValue)
                 let stringValue = value.stringValue
-                print("stringValue", stringValue)
                 FilterRef.ref.setValue(stringValue, forKey: forKey)
             default:
                 print("Unknown type")
@@ -129,7 +152,6 @@ public class ExpoImageFilterModule: Module {
 
         AsyncFunction("setValueImage") { (FilterRef: FilterRef, value: SharedRef<UIImage>, forKey: String, promise: Promise) in
             print("setValueImage")
-            print("FilterRef", FilterRef)
             print("value", value)
             print("forKey", forKey)
             let image: SharedRef<UIImage> = value
@@ -146,11 +168,21 @@ public class ExpoImageFilterModule: Module {
 
         Function("outputImage") { (FilterRef: FilterRef) in
             print("outputImage")
-            print(FilterRef)
-            guard let ciImage = FilterRef.ref.outputImage else {
-                print("outputImage is nil")
-                return OutputImageRef(UIImage())
+            print("Filter name:", FilterRef.ref.name)
+            print("Current input values:")
+            for key in FilterRef.ref.inputKeys {
+                print("\(key):", FilterRef.ref.value(forKey: key) as Any)
             }
+            
+            guard let ciImage = FilterRef.ref.outputImage else {
+                print("Failed to get output image. Filter name:", FilterRef.ref.name)
+                print("Available keys:", FilterRef.getCoreImageKeys())
+                print("Current values:", FilterRef.ref.inputKeys)
+                throw NSError(domain: "ExpoImageFilter", 
+                             code: 7, 
+                             userInfo: [NSLocalizedDescriptionKey: "Failed to get output image from filter \(FilterRef.ref.name). Make sure all required parameters are set."])
+            }
+            print("output done, trying uiimage")
             let uiImage = UIImage(ciImage: ciImage)
             print("uiImage", uiImage)
             return OutputImageRef(uiImage)
@@ -159,9 +191,7 @@ public class ExpoImageFilterModule: Module {
         AsyncFunction("base64ImageData") { (OutputImage: OutputImageRef, promise: Promise) in
             print("OutputImage", OutputImage)
             if let imageData = OutputImage.ref.pngData() {
-                print("imageData", imageData)
                 let strBase64 = imageData.base64EncodedString(options: .lineLength64Characters)
-                print(strBase64)
                 return promise.resolve(strBase64)
             }
             return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to get output image4"]))
@@ -209,6 +239,13 @@ public class ExpoImageFilterModule: Module {
                 promise.reject(NSError(domain: "ExpoImageFilter", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to apply filter"]))
             }
         }
+    }
+    public func checkKeyForFilter(filter: FilterRef, key: String) -> Bool {
+        let coreImageKeys = filter.getCoreImageKeys()
+        if coreImageKeys.keys.contains(key) {
+            return true
+        }
+            return false
     }
 }
 

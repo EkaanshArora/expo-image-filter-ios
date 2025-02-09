@@ -3,6 +3,7 @@
 // export type OnLoadEventPayload = {
 //   url: string;
 // };
+import { type SharedRef } from 'expo-modules-core/types';
 
 export type ExpoImageFilterModuleEvents = {
   onChange: (params: ChangeEventPayload) => void;
@@ -13,15 +14,17 @@ export type ChangeEventPayload = {
 };
 
 export type DictVals = {
-  type: "ciColor" | "string" | "number" | "boolean";
+  type: "ciColor" | "string" | "number" | "boolean" | "cgPoint";
   stringValue: string;
 };
 
-/**
- * Color represented as a hex string
- * @example "#000000"
- * @example "#ffffff"
- * @example "#00000000"
- * @example "#ffffff00"
- */
-export type HexColor = `#${string & { length: 8 | 6 }}`;
+export type HexColorWithoutAlpha = `#${Lowercase<string>}`;
+export type HexColorWithAlpha = `#${Lowercase<string>}`;
+
+export type HexColor = HexColorWithoutAlpha | HexColorWithAlpha;
+export type CGPoint = {
+  x: number;
+  y: number;
+};
+
+export type FilterPropertyValue = string | number | boolean | HexColor | SharedRef<'image'> | CGPoint;
