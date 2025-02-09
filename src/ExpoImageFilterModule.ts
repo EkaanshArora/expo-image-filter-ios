@@ -14,7 +14,7 @@ declare class ExpoImageFilterModule extends NativeModule<ExpoImageFilterModuleEv
   logSharedRef(FilterRef: SharedRef<'CIFilter'>): Promise<boolean>;
   setValue(FilterRef: SharedRef<'CIFilter'>, value: DictVals, forKey: string): Promise<boolean>;
   setValueImage(FilterRef: SharedRef<'CIFilter'>, value: SharedRef<'image'>, forKey: string): Promise<boolean>;
-  outputImage(FilterRef: SharedRef<'CIFilter'>): Promise<SharedRef<'UIImageOutput'>>;
+  outputImage(FilterRef: SharedRef<'CIFilter'>, cropToInputImage?: boolean): Promise<SharedRef<'UIImageOutput'>>;
   base64ImageData(Image: SharedRef<'UIImageOutput'>): Promise<string>;
 }
 

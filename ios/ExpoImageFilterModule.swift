@@ -112,7 +112,7 @@ public class ExpoImageFilterModule: Module {
                     promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to convert CGPoint"]))
                     return
                 }
-                // CGPoint doesn't work here 
+                // CGPoint doesn't work here, idk man this is a mess
                 let cgPoint = CIVector(x: x, y: y)
                 print("cgPoint", cgPoint)
                 FilterRef.ref.setValue(cgPoint, forKey: forKey)
@@ -166,7 +166,7 @@ public class ExpoImageFilterModule: Module {
             return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to get output image1"]))
         }
 
-        Function("outputImage") { (FilterRef: FilterRef) in
+        Function("outputImage") { (FilterRef: FilterRef, cropToInputImage: Bool) in
             print("outputImage")
             print("Filter name:", FilterRef.ref.name)
             print("Current input values:")
@@ -183,9 +183,20 @@ public class ExpoImageFilterModule: Module {
                              userInfo: [NSLocalizedDescriptionKey: "Failed to get output image from filter \(FilterRef.ref.name). Make sure all required parameters are set."])
             }
             print("output done, trying uiimage")
-            let uiImage = UIImage(ciImage: ciImage)
-            print("uiImage", uiImage)
-            return OutputImageRef(uiImage)
+            if cropToInputImage {
+                // input image extent
+                print("inputImage from filter", FilterRef.ref.value(forKey: kCIInputImageKey) as Any)
+                let inputImage = FilterRef.ref.value(forKey: kCIInputImageKey) as? CIImage
+                let origImage = inputImage?.extent ?? CGRect(x: 0, y: 0, width: 0, height: 0)
+                let croppedImage = ciImage.cropped(to: origImage)
+                let uiImage = UIImage(ciImage: croppedImage)
+                print("uiImage cropped", uiImage)
+                return OutputImageRef(uiImage)
+            } else {
+                let uiImage = UIImage(ciImage: ciImage)
+                print("uiImage", uiImage)
+                return OutputImageRef(uiImage)
+            }
         }
 
         AsyncFunction("base64ImageData") { (OutputImage: OutputImageRef, promise: Promise) in

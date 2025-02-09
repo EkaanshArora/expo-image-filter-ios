@@ -30,12 +30,13 @@ const logSharedRef = ExpoImageFilterModule.logSharedRef
 /**
  * Get the output image from the CIFilter
  * @param nativeFilter - The native filter to get the output image from
+ * @param cropToInputImage - (Optional) Whether to crop the output image to the input image
  * @returns The output image
  * @example
  * const nativeFilter = await createCIFilter("CIColorMonochrome")
  * const outputImageRes = await outputImage(nativeFilter)
  */
-const outputImage = ExpoImageFilterModule.outputImage
+const outputImage = (nativeFilter: SharedRef<'CIFilter'>, cropToInputImage?: boolean) => ExpoImageFilterModule.outputImage(nativeFilter, cropToInputImage ?? false)
 /**
  * Set the value of the CIFilter
  * @param nativeFilter - The native filter to set the value on
