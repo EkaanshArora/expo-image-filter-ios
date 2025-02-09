@@ -3,12 +3,19 @@ import CoreImage.CIFilterBuiltins
 import ExpoModulesCore
 import UIKit
 
+enum DictValsStringValue: String, Enumerable {
+    case string
+    case number
+    case boolean
+    case ciColor
+}
+
 struct DictVals: Record {
     @Field
-    var stringValue: String = ""
+    var stringValue: String = "string"
 
     @Field
-    var type: String = "string"
+    var type: DictValsStringValue = .string
 }
 
 public final class FilterRef: SharedRef<CIFilter> {
@@ -79,21 +86,17 @@ public class ExpoImageFilterModule: Module {
                 return promise.resolve(true)
             }
         }
-
+        
         AsyncFunction("setValue") { (FilterRef: FilterRef, value: DictVals, forKey: String, promise: Promise) in
             print("setValue")
             print("DictVals", value.type)
 
             switch value.type {
-            case "float":
+            case DictValsStringValue.number:
                 if let floatValue = Float(value.stringValue) {
                     FilterRef.ref.setValue(floatValue, forKey: forKey)
                 }
-            case "boolean":
-                if let booleanValue = Bool(value.stringValue) {
-                    FilterRef.ref.setValue(booleanValue, forKey: forKey)
-                }
-            case "CIColor":
+            case .ciColor:
                 print("CIColor", value.stringValue)
                 guard let color = UIColor(hex: value.stringValue) else {
                     promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to convert color"]))
@@ -103,7 +106,11 @@ public class ExpoImageFilterModule: Module {
                 let colorValue = CIColor(color: color)
                 print("colorValue", colorValue)
                 FilterRef.ref.setValue(colorValue, forKey: forKey)
-            case "string":
+            case .boolean:
+                if let booleanValue = Bool(value.stringValue) {
+                    FilterRef.ref.setValue(booleanValue, forKey: forKey)
+                }
+            case .string:
                 let stringValue = value.stringValue
                 print("stringValue", stringValue)
                 FilterRef.ref.setValue(stringValue, forKey: forKey)
@@ -135,8 +142,6 @@ public class ExpoImageFilterModule: Module {
                 return promise.resolve(true)
             }
             return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to get output image1"]))
-
-            return promise.reject(NSError(domain: "ExpoImageFilter", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to get output image2"]))
         }
 
         Function("outputImage") { (FilterRef: FilterRef) in

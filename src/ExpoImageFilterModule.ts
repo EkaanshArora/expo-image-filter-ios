@@ -5,7 +5,7 @@ import { ExpoImageFilterModuleEvents } from './ExpoImageFilter.types';
 import { SharedRef } from 'expo-modules-core/types';
 
 type DictVals = {
-  type: string;
+  type: "ciColor" | "string" | "number" | "boolean";
   stringValue: string;
 };
 

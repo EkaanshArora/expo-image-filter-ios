@@ -1,9 +1,9 @@
-import ExpoImageFilter from 'expo-image-filter';
+import React from 'react';
+import { inferTypeAndSetValue, createCIFilter, outputImage, base64ImageData } from 'expo-image-filter';
 import { useImage } from 'expo-image';
 import { useState } from 'react';
 import { Button, SafeAreaView, ScrollView, Text, Image } from 'react-native';
 
-const { createCIFilter, setValueImage, setValue, outputImage, base64ImageData } = ExpoImageFilter;
 const imageURL = "https://ik.imagekit.io/ikmedia/Graphics/AI%20Landing%20page/Text%20prompt%20in%20URL.jpg?updatedAt=1726226940145&tr=w-400";
 
 export default function App() {
@@ -75,15 +75,17 @@ const RNImageFilter = () => {
     }
   };
 
-  return <>
-    <Button
-      title="Apply Filter"
-      onPress={async () => {
-        await applyFilter();
-      }}
-    />
-    {imaged2 ? <Image source={{ uri: `data:image/jpeg;base64,${imaged2}` }} style={{ width: 200, height: 200 }} /> : <></>}
-  </>
+  return (
+    <>
+      <Button
+        title="Apply Filter"
+        onPress={async () => {
+          await applyFilter();
+        }}
+      />
+      {imaged2 ? <Image source={{ uri: `data:image/jpeg;base64,${imaged2}` }} style={{ width: 200, height: 200 }} /> : <></>}
+    </>
+  )
 }
 
 
@@ -98,13 +100,16 @@ const ExpoModuleComponent = () => {
     if (image) {
       try {
         const nativeFilter = await createCIFilter("CIColorMonochrome")
-        await setValue(nativeFilter, { stringValue: "1", type: "float" }, "inputIntensity")
+        // await setValue(nativeFilter, { stringValue: "1", type: "number" }, "inputIntensity")
+        await inferTypeAndSetValue(nativeFilter, "inputIntensity", 1)
         // can we wrap this as: 
         // await setValue(nativeFilter, "#ff00ffff", "inputColor") and 
         // await setValue(nativeFilter, true, "inputImage")
         // we can inherit the type from the value
-        await setValue(nativeFilter, { stringValue: "#ff00ffff", type: "CIColor" }, "inputColor")
-        await setValueImage(nativeFilter, image, "inputImage")
+        // await setValue(nativeFilter, { stringValue: "#ff00ffff", type: "CIColor" }, "inputColor")
+        await inferTypeAndSetValue(nativeFilter, "inputColor", "#ff00ffff")
+        // await setValueImage(nativeFilter, image, "inputImage")
+        await inferTypeAndSetValue(nativeFilter, "inputImage", image)
         const outputImageRes = await outputImage(nativeFilter)
         const base64Image = await base64ImageData(outputImageRes)
         console.log("base64Image", base64Image)
