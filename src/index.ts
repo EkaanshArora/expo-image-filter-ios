@@ -1,11 +1,11 @@
 // Reexport the native module. On web, it will be resolved to ExpoImageFilterModule.web.ts
 // and on native platforms to ExpoImageFilterModule.ts
-// export { default } from './ExpoImageFilterModule';
 import { SharedRef } from 'expo-modules-core/types';
 import ExpoImageFilterModule from './ExpoImageFilterModule'
 import { HexColor, FilterPropertyValue } from './ExpoImageFilter.types';
 
-const ApplyCIFilterToImageAndReturnBase64 = ExpoImageFilterModule.ApplyCIFilterToImageAndReturnBase64;
+const setValue = ExpoImageFilterModule.setValue
+const setValueImage = ExpoImageFilterModule.setValueImage
 /**
  * Get the base64 image data from the output image
  * @param outputImage - The output image to get the base64 data from
@@ -14,7 +14,7 @@ const ApplyCIFilterToImageAndReturnBase64 = ExpoImageFilterModule.ApplyCIFilterT
  * const outputImageRes = await outputImage(nativeFilter)
  * const base64Image = await base64ImageData(outputImageRes)
  */
-const base64ImageData = ExpoImageFilterModule.base64ImageData
+const createBase64 = ExpoImageFilterModule.createBase64
 /**
  * Create a CIFilter
  * @param filterName - The name of the filter to create
@@ -36,27 +36,9 @@ const logSharedRef = ExpoImageFilterModule.logSharedRef
  * const nativeFilter = await createCIFilter("CIColorMonochrome")
  * const outputImageRes = await outputImage(nativeFilter)
  */
-const outputImage = (nativeFilter: SharedRef<'CIFilter'>, cropToInputImage?: boolean) => ExpoImageFilterModule.outputImage(nativeFilter, cropToInputImage ?? false)
+const getOutputImage = (nativeFilter: SharedRef<'CIFilter'>, cropToInputImage?: boolean) => ExpoImageFilterModule.getOutputImage(nativeFilter, cropToInputImage ?? false)
 /**
- * Set the value of the CIFilter
- * @param nativeFilter - The native filter to set the value on
- * @param key - The key to set the value on
- * @param value - The value to set on the native filter
- * @example
- * const nativeFilter = await createCIFilter("CIColorMonochrome")
- * await setValue(nativeFilter, "inputIntensity", 1)
- */
-const setValue = ExpoImageFilterModule.setValue
-/**
- * Set the value of the CIFilter from an image
- * @param nativeFilter - The native filter to set the value on
- * @param value - The value to set on the native filter
- * @param key - The key to set the value on
- */
-const setValueImage = ExpoImageFilterModule.setValueImage
-
-/**
- * Infer the type of the value and set it on the native filter
+ * Set value on the native filter
  * @param nativeFilter - The native filter to set the value on
  * @param key - The key to set the value on
  * @param value - The value to set on the native filter
@@ -68,7 +50,7 @@ const setValueImage = ExpoImageFilterModule.setValueImage
  * const outputImageRes = await outputImage(nativeFilter)
  * const base64Image = await base64ImageData(outputImageRes)
  */
-const inferTypeAndSetValue = async <T extends string>(
+const setFilterValue = async <T extends string>(
     nativeFilter: SharedRef<'CIFilter'>,
     key: T,
     value:
@@ -102,14 +84,11 @@ const inferTypeAndSetValue = async <T extends string>(
 }
 
 export {
-    ApplyCIFilterToImageAndReturnBase64,
-    base64ImageData,
+    createBase64,
     createCIFilter,
     logSharedRef,
-    outputImage,
-    setValue,
-    setValueImage,
-    inferTypeAndSetValue,
+    getOutputImage,
+    setFilterValue,
 }
 
 export * from './ExpoImageFilter.types';
