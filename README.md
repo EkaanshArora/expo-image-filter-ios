@@ -1,35 +1,31 @@
 # expo-image-filter
 
-Apply iOS CIFilter in RN
+Apply filters to images in React Native (iOS only, for now). Works with `expo-image`, uses the native shared image object for blazingly fast performance.
 
-# API documentation
+## Installation
 
-- [Documentation for the latest stable release](https://docs.expo.dev/versions/latest/sdk/expo-image-filter#readme/)
-- [Documentation for the main branch](https://docs.expo.dev/versions/unversioned/sdk/expo-image-filter#readme/)
-
-# Installation in managed Expo projects
-
-For [managed](https://docs.expo.dev/archive/managed-vs-bare/) Expo projects, please follow the installation instructions in the [API documentation for the latest stable release](#api-documentation). If you follow the link and there is no documentation available then this library is not yet usable within managed projects &mdash; it is likely to be included in an upcoming Expo SDK release.
-
-# Installation in bare React Native projects
-
-For bare React Native projects, you must ensure that you have [installed and configured the `expo` package](https://docs.expo.dev/bare/installing-expo-modules/) before continuing.
-
-### Add the package to your npm dependencies
-
-```
-npm install expo-image-filter
+```bash
+$ npx expo install expo-image-filter
+$ npx pod-install
 ```
 
-### Configure for Android
+## Usage
 
+```tsx
+import { useImage } from 'expo-image';
+import { createCIFilter, setFilterValue, getOutputImage, createBase64 } from 'expo-image-filter';
+function App() {
+  const [viewImage, setViewImage] = useState<string>();
+  const inputImage = useImage({ uri: uri });
 
-
-
-### Configure for iOS
-
-Run `npx pod-install` after installing the npm package.
-
-# Contributing
-
-Contributions are very welcome! Please refer to guidelines described in the [contributing guide]( https://github.com/expo/expo#contributing).
+  const func = async () => {
+    if (inputImage) {
+      const filter = await createCIFilter("CISepiaTone")
+      await setFilterValue(filter, "0.8", "inputIntensity")
+      await setFilterValue(filter, image, "inputImage")
+      const imageRef = await getOutputImage(nativeFilter)
+      const base64Image = await createBase64(outputImageRes)
+      setViewImage(base64Image)
+    }
+  }
+```

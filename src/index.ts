@@ -1,8 +1,8 @@
 // Reexport the native module. On web, it will be resolved to ExpoImageFilterModule.web.ts
 // and on native platforms to ExpoImageFilterModule.ts
-import { SharedRef } from 'expo-modules-core/types';
+import type { SharedRef } from 'expo-modules-core/types';
 import ExpoImageFilterModule from './ExpoImageFilterModule'
-import { HexColor, FilterPropertyValue } from './ExpoImageFilter.types';
+import type { FilterPropertyValue } from './ExpoImageFilter.types';
 
 const setValue = ExpoImageFilterModule.setValue
 const setValueImage = ExpoImageFilterModule.setValueImage
@@ -24,19 +24,25 @@ const createBase64 = ExpoImageFilterModule.createBase64
  */
 const createCIFilter = ExpoImageFilterModule.createCIFilter
 /**
- * Log the shared ref
+ * Log the shared ref for debugging purposes. Logs the filter details on the native side, use xcode debugger to inspect.
+ * @param FilterRef - The reference to the CIFilter to log
+ * @returns `true` if the ref exists and was logged, `false` otherwise
+ * @example
+ * const nativeFilter = await createCIFilter("CIColorMonochrome")
+ * logSharedFilterRef(nativeFilter)
  */
-const logSharedRef = ExpoImageFilterModule.logSharedRef
+const logSharedFilterRef = ExpoImageFilterModule.logSharedFilterRef
 /**
  * Get the output image from the CIFilter
  * @param nativeFilter - The native filter to get the output image from
- * @param cropToInputImage - (Optional) Whether to crop the output image to the input image
+ * @param cropToInputImage - (Optional) Whether to crop the output image to the input image. This is useful when the resulting flter generates an image that's larger than the input image. Default: `false`.
  * @returns The output image
  * @example
  * const nativeFilter = await createCIFilter("CIColorMonochrome")
  * const outputImageRes = await outputImage(nativeFilter)
  */
 const getOutputImage = (nativeFilter: SharedRef<'CIFilter'>, cropToInputImage?: boolean) => ExpoImageFilterModule.getOutputImage(nativeFilter, cropToInputImage ?? false)
+
 /**
  * Set value on the native filter
  * @param nativeFilter - The native filter to set the value on
@@ -50,43 +56,47 @@ const getOutputImage = (nativeFilter: SharedRef<'CIFilter'>, cropToInputImage?: 
  * const outputImageRes = await outputImage(nativeFilter)
  * const base64Image = await base64ImageData(outputImageRes)
  */
-const setFilterValue = async <T extends string>(
+const setFilterValue = async <FilterPropertyKey extends string>(
     nativeFilter: SharedRef<'CIFilter'>,
-    key: T,
-    value:
-        T extends "inputColor" ? HexColor :
-        T extends "inputImage" ? SharedRef<'image'> :
-        FilterPropertyValue) => {
+    key: FilterPropertyKey,
+    value: FilterPropertyValue<FilterPropertyKey>) => {
     if (typeof value === 'object' && 'x' in value && 'y' in value) {
         return await setValue(nativeFilter, { type: 'cgPoint', stringValue: `${value.x},${value.y}` }, key);
-    } else if (typeof value === 'object' && 'height' in value && 'width' in value) {
+    }
+
+    if (typeof value === 'object' && 'height' in value && 'width' in value) {
         return await setValueImage(nativeFilter, value, key);
-    } else if (typeof value === 'string') {
+    }
+
+    if (typeof value === 'string') {
         if (value.startsWith('#')) {
             if (value.length === 9) {
                 return await setValue(nativeFilter, { type: 'ciColor', stringValue: value }, key);
-            } else if (value.length === 7) {
-                return await setValue(nativeFilter, { type: 'ciColor', stringValue: `${value}ff` }, key);
-            } else {
-                throw new Error('Invalid hex color');
             }
-        } else {
-            return await setValue(nativeFilter, { type: 'string', stringValue: value }, key);
+            if (value.length === 7) {
+                return await setValue(nativeFilter, { type: 'ciColor', stringValue: `${value}ff` }, key);
+            }
+            throw new Error('Invalid hex color');
         }
-    } else if (typeof value === 'number') {
+        return await setValue(nativeFilter, { type: 'string', stringValue: value }, key);
+    }
+
+    if (typeof value === 'number') {
         // there's probably a way to send native value and infer the type on swift side but this works for now
         return await setValue(nativeFilter, { type: 'number', stringValue: value.toString() }, key);
-    } else if (typeof value === 'boolean') {
+    }
+
+    if (typeof value === 'boolean') {
         return await setValue(nativeFilter, { type: 'boolean', stringValue: value.toString() }, key);
     }
-    console.log("value", value, typeof value)
+
     throw new Error('Invalid value type');
 }
 
 export {
     createBase64,
     createCIFilter,
-    logSharedRef,
+    logSharedFilterRef,
     getOutputImage,
     setFilterValue,
 }

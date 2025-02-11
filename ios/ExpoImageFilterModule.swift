@@ -79,13 +79,13 @@ public class ExpoImageFilterModule: Module {
             return filterRef
         }
 
-        AsyncFunction("logSharedRef") { (filterRef: FilterRef?, promise: Promise) in
+        AsyncFunction("logSharedFilterRef") { (filterRef: FilterRef?, promise: Promise) in
             if let filter = filterRef {
-                print("logSharedRef - filter:", filter)
-                print("logSharedRef - filter name:", filter.ref.name)
+                print("logSharedFilterRef - filter:", filter)
+                print("logSharedFilterRef - filter name:", filter.ref.name)
                 return promise.resolve(true)
             } else {
-                print("logSharedRef - received nil filter reference")
+                print("logSharedFilterRef - received nil filter reference")
                 return promise.resolve(true)
             }
         }

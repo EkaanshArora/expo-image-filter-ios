@@ -1,9 +1,4 @@
-// import type { StyleProp, ViewStyle } from 'react-native';
-
-// export type OnLoadEventPayload = {
-//   url: string;
-// };
-import { type SharedRef } from 'expo-modules-core/types';
+import type { SharedRef } from 'expo-modules-core/types';
 
 export type ExpoImageFilterModuleEvents = {
   onChange: (params: ChangeEventPayload) => void;
@@ -27,4 +22,8 @@ export type CGPoint = {
   y: number;
 };
 
-export type FilterPropertyValue = string | number | boolean | HexColor | SharedRef<'image'> | CGPoint;
+export type FilterPropertyPossibleValues = string | number | boolean | HexColor | SharedRef<'image'> | CGPoint;
+export type FilterPropertyValue<T extends string> =
+  T extends "inputColor" ? HexColor :
+  T extends "inputImage" ? SharedRef<'image'> :
+  FilterPropertyPossibleValues
