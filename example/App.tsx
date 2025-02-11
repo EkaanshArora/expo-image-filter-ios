@@ -1,50 +1,55 @@
-import { useEvent } from 'expo';
-import ExpoImageFilter, { ExpoImageFilterView } from 'expo-image-filter';
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { setFilterValue, createCIFilter, getOutputImage, createBase64FromImage } from 'expo-image-filter';
+import { useImage } from 'expo-image';
+import { Button, SafeAreaView, ScrollView, Text, Image } from 'react-native';
+
+const imageURL = "";
 
 export default function App() {
-  const onChangePayload = useEvent(ExpoImageFilter, 'onChange');
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.container}>
-        <Text style={styles.header}>Module API Example</Text>
-        <Group name="Constants">
-          <Text>{ExpoImageFilter.PI}</Text>
-        </Group>
-        <Group name="Functions">
-          <Text>{ExpoImageFilter.hello()}</Text>
-        </Group>
-        <Group name="Async functions">
-          <Button
-            title="Set value"
-            onPress={async () => {
-              await ExpoImageFilter.setValueAsync('Hello from JS!');
-            }}
-          />
-        </Group>
-        <Group name="Events">
-          <Text>{onChangePayload?.value}</Text>
-        </Group>
-        <Group name="Views">
-          <ExpoImageFilterView
-            url="https://www.example.com"
-            onLoad={({ nativeEvent: { url } }) => console.log(`Loaded: ${url}`)}
-            style={styles.view}
-          />
-        </Group>
+        <Text style={styles.header}>Expo Image Filter</Text>
+        <Image source={{ uri: imageURL }} style={styles.image} />
+        <ExpoModuleComponent />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function Group(props: { name: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text style={styles.groupHeader}>{props.name}</Text>
-      {props.children}
-    </View>
-  );
+const ExpoModuleComponent = () => {
+  const [imageData, setImageData] = useState<string | null>(null);
+  const image = useImage({
+    uri: imageURL,
+  });
+
+  const applyFilter = async () => {
+    if (image) {
+      try {
+        const nativeFilter = await createCIFilter("CIColorMonochrome")
+        await setFilterValue(nativeFilter, "inputImage", image)
+        await setFilterValue(nativeFilter, "inputColor", "#ff00ff")
+        await setFilterValue(nativeFilter, "inputIntensity", 1)
+        const outputImageRes = getOutputImage(nativeFilter, true)
+        const base64Image = await createBase64FromImage(outputImageRes)
+        setImageData(base64Image)
+      } catch (error) {
+        console.error("Error applying filter:", error);
+      }
+    }
+
+  }
+
+  return <>
+    <Button
+      title="Native Filter"
+      onPress={async () => {
+        await applyFilter();
+      }}
+    />
+    {imageData ? <Image source={{ uri: `data:image/png;base64,${imageData}` }} style={styles.image} /> : <></>}
+  </>
 }
 
 const styles = {
@@ -52,22 +57,9 @@ const styles = {
     fontSize: 30,
     margin: 20,
   },
-  groupHeader: {
-    fontSize: 20,
-    marginBottom: 20,
-  },
-  group: {
-    margin: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-  },
   container: {
     flex: 1,
     backgroundColor: '#eee',
   },
-  view: {
-    flex: 1,
-    height: 200,
-  },
+  image: { width: 300, height: 300 }
 };
