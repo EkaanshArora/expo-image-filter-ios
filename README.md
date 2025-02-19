@@ -1,10 +1,10 @@
 # expo-image-filter
+[![](https://img.shields.io/badge/expo_image_filter-a?logo=npm)](https://www.npmjs.com/package/expo-image-filter)
 
 > Note: This module is still under development. Appreaciate any feedback or contributions!  
 > iOS only for now
 
-Apply filters to images in React Native. Works with `expo-image`, uses the native shared image object for blazingly fast performance.
-
+Apply filters to images in React Native. Works with `expo-image`, uses the native shared image object for blazingly fast performance. Read the [docs](https://ekaansharora.github.io/expo-image-filter-ios/).
 ## Installation
 
 ```bash
